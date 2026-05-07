@@ -2,10 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-# Clave secreta necesaria para las sesiones y mensajes flash
-app.secret_key = 'novasalut_secret_key_2026'
+app.secret_key = 'novasalut_secret_key_2026' # Seguridad para sesiones
 
-# --- CONFIGURACIÓN DE CONEXIÓN A AMAZON AURORA (Datos de Jaume) ---
+# --- CONFIGURACIÓN DE CONEXIÓN A AMAZON AURORA (Clúster de Jaume) ---
 DB_USER = 'admin'
 DB_PASS = 'Passw0rd!:.'
 DB_HOST = 'aurora-cluster.cluster-cy85ltnhoq9c.us-east-1.rds.amazonaws.com'
@@ -16,7 +15,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# --- MODELOS DE DATOS ---
+# --- MODELOS DE DATOS (Tablas en AWS) ---
 class Paciente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dni = db.Column(db.String(20), unique=True, nullable=False)
@@ -30,19 +29,19 @@ class Cita(db.Model):
     horario = db.Column(db.String(20), nullable=False)
     especialidad = db.Column(db.String(50), nullable=False)
     medico = db.Column(db.String(100), nullable=False)
+    observaciones = db.Column(db.String(250))
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
 
-# --- INICIALIZACIÓN Y USUARIO DE PRUEBA ---
+# --- INICIALIZACIÓN DE LA BASE DE DATOS ---
 with app.app_context():
     db.create_all()
-    # Creamos un usuario de prueba para que puedas loguearte nada más arrancar
+    # Usuario de prueba: 12345678A / admin
     if not Paciente.query.filter_by(dni='12345678A').first():
         user_test = Paciente(dni='12345678A', nombre='Jose Tejero', password='admin')
         db.session.add(user_test)
         db.session.commit()
-        print("👤 Usuario de prueba creado: 12345678A / admin")
 
-# --- RUTAS DE NAVEGACIÓN Y LOGIN ---
+# --- RUTAS ---
 
 @app.route('/')
 def home():
@@ -53,71 +52,53 @@ def login():
     if request.method == 'POST':
         dni_f = request.form.get('dni')
         pass_f = request.form.get('password')
-
-        # Buscamos al paciente en Aurora
         user = Paciente.query.filter_by(dni=dni_f).first()
 
         if user and user.password == pass_f:
-            # Login correcto: Guardamos datos en la sesión
             session['user_id'] = user.id
             session['user_name'] = user.nombre
-            flash(f'Bienvenido de nuevo, {user.nombre}', 'success')
+            flash(f'Bienvenido al portal, {user.nombre}', 'success')
             return redirect(url_for('home'))
         else:
-            # Login incorrecto
-            flash('DNI o contraseña incorrectos.', 'danger')
-            
+            flash('Credenciales incorrectas.', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
     session.clear()
-    flash('Has cerrado sesión correctamente.', 'info')
-    return redirect(url_for('login'))
+    return redirect(url_for('home'))
 
 @app.route('/citas', methods=['GET', 'POST'])
 def citas():
-    # 1. Comprobar seguridad: ¿Ha hecho login el usuario?
     if 'user_id' not in session:
-        flash('Acceso denegado. Por favor, inicie sesión para pedir una cita.', 'warning')
+        flash('Inicie sesión para solicitar una cita.', 'warning')
         return redirect(url_for('login'))
 
-    # 2. Si el usuario envía el formulario (POST)
     if request.method == 'POST':
         try:
-            # Recoger los datos del formulario HTML
-            f_especialidad = request.form.get('especialidad')
-            f_medico = request.form.get('medico')
-            f_fecha = request.form.get('fecha')
-            f_horario = request.form.get('horario')
-
-            # Crear el objeto Cita y enlazarlo con el ID del paciente logueado
             nueva_cita = Cita(
-                fecha=f_fecha,
-                horario=f_horario,
-                especialidad=f_especialidad,
-                medico=f_medico,
+                fecha=request.form.get('fecha'),
+                horario=request.form.get('horario'),
+                especialidad=request.form.get('especialidad'),
+                medico=request.form.get('medico'),
+                observaciones=request.form.get('observaciones'),
                 paciente_id=session['user_id']
             )
-
-            # Insertar en Amazon Aurora
             db.session.add(nueva_cita)
             db.session.commit()
-
-            flash('✅ ¡Cita médica programada con éxito!', 'success')
-            return redirect(url_for('historial')) # Lo mandamos al historial para verla
-
+            flash('✅ Cita guardada correctamente en Amazon Aurora.', 'success')
+            return redirect(url_for('historial'))
         except Exception as e:
-            db.session.rollback() # Si falla, deshacemos los cambios por seguridad
-            flash('❌ Ocurrió un error al guardar la cita en la nube.', 'danger')
-            print(f"Error de BD: {e}")
-
-    # 3. Si solo está visitando la página (GET), mostramos el formulario
+            db.session.rollback()
+            flash(f'❌ Error al guardar en la nube.', 'danger')
     return render_template('citas.html')
 
 @app.route('/historial')
 def historial():
-    return render_template('historial.html')
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    mis_citas = Cita.query.filter_by(paciente_id=session['user_id']).all()
+    return render_template('historial.html', citas=mis_citas)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
