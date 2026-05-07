@@ -15,8 +15,14 @@
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Médico</label>
-                        <input type="text" class="form-control" name="medico" placeholder="Nombre del facultativo" required>
+                        <label class="form-label fw-semibold">Profesional Médico</label>
+                        <select class="form-select" name="medico" required>
+                        <option value="" selected disabled>Seleccione un facultativo...</option>
+                        <option value="Dra. García">Dra. García (Medicina General)</option>
+                        <option value="Dr. Morte">Dr. Morte (Traumatología)</option>
+                        <option value="Dr. Aguilar">Dr. Aguilar (Pediatría)</option>
+                        <option value="Dra. Tejero">Dra. Tejero (Enfermería)</option>
+                </select>
                     </div>
                 </div>
                 <div class="row mb-4">
