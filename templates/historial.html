@@ -1,45 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-        <h3 class="fw-bold text-primary m-0"><i class="bi bi-file-earmark-text me-2"></i>Mi Historial Médico</h3>
-        <button class="btn btn-outline-primary btn-sm rounded-pill"><i class="bi bi-download me-1"></i>Exportar Historial</button>
+<div class="card p-4 shadow-sm mt-4">
+    <div class="mb-4 border-bottom pb-3">
+        <h3 class="fw-bold text-primary m-0"><i class="bi bi-file-earmark-text me-2"></i>Mi Historial Clínico</h3>
     </div>
-
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
                     <th>Fecha</th>
+                    <th>Turno</th>
                     <th>Especialidad</th>
                     <th>Facultativo</th>
+                    <th>Observaciones</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Estos datos en la Tarea G4-65 vendrán de la Base de Datos RDS -->
+                {% for cita in citas %}
                 <tr>
-                    <td class="fw-semibold">15/04/2026</td>
-                    <td>Medicina General</td>
-                    <td>Dra. García</td>
-                    <td><span class="badge bg-success">Completada</span></td>
-                    <td><a href="#" class="btn btn-sm btn-light text-primary"><i class="bi bi-eye"></i> Ver Informe</a></td>
+                    <td class="fw-semibold">{{ cita.fecha }}</td>
+                    <td>{{ cita.horario }}</td>
+                    <td><span class="badge bg-info text-dark">{{ cita.especialidad }}</span></td>
+                    <td>{{ cita.medico }}</td>
+                    <td class="text-muted small">{{ cita.observaciones or 'Sin observaciones' }}</td>
+                    <td><span class="badge bg-success">Confirmada</span></td>
                 </tr>
-                <tr>
-                    <td class="fw-semibold">02/03/2026</td>
-                    <td>Traumatología</td>
-                    <td>Dr. Morte</td>
-                    <td><span class="badge bg-warning text-dark">Pendiente Analítica</span></td>
-                    <td><a href="#" class="btn btn-sm btn-light text-primary"><i class="bi bi-eye"></i> Ver Informe</a></td>
-                </tr>
-                <tr>
-                    <td class="fw-semibold">10/11/2025</td>
-                    <td>Dermatología</td>
-                    <td>Dr. Aguilar</td>
-                    <td><span class="badge bg-secondary">Archivada</span></td>
-                    <td><a href="#" class="btn btn-sm btn-light text-primary"><i class="bi bi-eye"></i> Ver Informe</a></td>
-                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No hay citas registradas.</td></tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
