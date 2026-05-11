@@ -2,9 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.secret_key = 'novasalut_secret_key_2026' # Seguridad para sesiones
+app.secret_key = 'novasalut_secret_key_2026'
 
-# --- CONFIGURACIÓN DE CONEXIÓN A AMAZON AURORA (Clúster de Jaume) ---
+# --- CONEXIÓN A AMAZON AURORA (Datos de Jaume) ---
 DB_USER = 'admin'
 DB_PASS = 'Passw0rd!:.'
 DB_HOST = 'aurora-cluster.cluster-cy85ltnhoq9c.us-east-1.rds.amazonaws.com'
@@ -15,7 +15,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# --- MODELOS DE DATOS (Tablas en AWS) ---
+# --- MODELOS DE DATOS ---
 class Paciente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dni = db.Column(db.String(20), unique=True, nullable=False)
@@ -32,14 +32,12 @@ class Cita(db.Model):
     observaciones = db.Column(db.String(250))
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
 
-# --- INICIALIZACIÓN DE LA BASE DE DATOS ---
+# --- INICIALIZACIÓN ---
 with app.app_context():
-    db.create_all()
-    # Usuario de prueba: 12345678A / admin
-    if not Paciente.query.filter_by(dni='12345678A').first():
-        user_test = Paciente(dni='12345678A', nombre='Jose Tejero', password='admin')
-        db.session.add(user_test)
-        db.session.commit()
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Error inicializando DB: {e}")
 
 # --- RUTAS ---
 
@@ -47,20 +45,43 @@ with app.app_context():
 def home():
     return render_template('index.html')
 
+# NUEVA RUTA: REGISTER
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        dni_f = request.form.get('dni')
+        nombre_f = request.form.get('nombre')
+        pass_f = request.form.get('password')
+
+        existe = Paciente.query.filter_by(dni=dni_f).first()
+        if existe:
+            flash('El DNI ya está registrado.', 'danger')
+            return redirect(url_for('register'))
+
+        nuevo_paciente = Paciente(dni=dni_f, nombre=nombre_f, password=pass_f)
+        try:
+            db.session.add(nuevo_paciente)
+            db.session.commit()
+            flash('Cuenta creada. Ya puedes iniciar sesión.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error al crear la cuenta.', 'danger')
+    return render_template('register.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         dni_f = request.form.get('dni')
         pass_f = request.form.get('password')
         user = Paciente.query.filter_by(dni=dni_f).first()
-
         if user and user.password == pass_f:
             session['user_id'] = user.id
             session['user_name'] = user.nombre
-            flash(f'Bienvenido al portal, {user.nombre}', 'success')
+            flash(f'Bienvenido, {user.nombre}', 'success')
             return redirect(url_for('home'))
         else:
-            flash('Credenciales incorrectas.', 'danger')
+            flash('DNI o contraseña incorrectos.', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -71,9 +92,8 @@ def logout():
 @app.route('/citas', methods=['GET', 'POST'])
 def citas():
     if 'user_id' not in session:
-        flash('Inicie sesión para solicitar una cita.', 'warning')
+        flash('Inicie sesión primero.', 'warning')
         return redirect(url_for('login'))
-
     if request.method == 'POST':
         try:
             nueva_cita = Cita(
@@ -86,11 +106,11 @@ def citas():
             )
             db.session.add(nueva_cita)
             db.session.commit()
-            flash('✅ Cita guardada correctamente en Amazon Aurora.', 'success')
+            flash('✅ Cita guardada.', 'success')
             return redirect(url_for('historial'))
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ Error al guardar en la nube.', 'danger')
+            flash('❌ Error al guardar.', 'danger')
     return render_template('citas.html')
 
 @app.route('/historial')
