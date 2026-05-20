@@ -1,37 +1,97 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="px-4 py-5 my-5 text-center bg-white rounded-3 shadow-sm card">
-    <i class="bi bi-shield-plus text-primary mb-3" style="font-size: 5rem;"></i>
-    <h1 class="display-5 fw-bold text-dark">Centro de Salud Digital</h1>
-    <div class="col-lg-6 mx-auto">
-        <p class="lead mb-4 text-muted">Bienvenido a su espacio personal de salud. Desde aquí podrá gestionar sus consultas, acceder a sus resultados médicos y contactar con sus especialistas de forma totalmente segura.</p>
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a href="/login" class="btn btn-primary btn-lg px-4 gap-3 rounded-pill">Identificarse (Login)</a>
+
+{% if session['user_id'] %}
+<!-- VISTA DASHBOARD (LOGUEADO) -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="fw-bold">Bienvenido de nuevo, {{ session['user_name'] }}</h2>
+        <p class="text-muted">Este es tu resumen de salud para hoy.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Tarjeta de bienvenida rápida -->
+    <div class="col-md-8">
+        <div class="card p-4 bg-primary text-white h-100 shadow">
+            <div class="row align-items-center">
+                <div class="col-sm-8">
+                    <h3>¿Necesitas ver a un especialista?</h3>
+                    <p>Recuerda que puedes solicitar citas en menos de 1 minuto desde el portal.</p>
+                    <a href="/citas" class="btn btn-light text-primary btn-pill fw-bold">Pedir cita ahora</a>
+                </div>
+                <div class="col-sm-4 d-none d-sm-block text-center">
+                    <i class="bi bi-calendar2-plus" style="font-size: 5rem; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Contador -->
+    <div class="col-md-4">
+        <div class="card p-4 h-100 bg-white">
+            <h6 class="text-uppercase text-muted small fw-bold">Citas en tu historial</h6>
+            <h2 class="display-4 fw-bold text-primary">{{ citas_count }}</h2>
+            <p class="mb-0"><a href="/historial" class="text-decoration-none">Ver todas las citas <i class="bi bi-arrow-right"></i></a></p>
         </div>
     </div>
 </div>
 
-<div class="row g-4 py-3 row-cols-1 row-cols-lg-3">
-    <div class="col text-center">
-        <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
-            <i class="bi bi-calendar-check"></i>
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card p-4 border-0">
+            <h5 class="fw-bold mb-3">Accesos Rápidos</h5>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-light border btn-pill"><i class="bi bi-file-earmark-pdf me-2"></i>Mis Analíticas</button>
+                <button class="btn btn-light border btn-pill"><i class="bi bi-prescription2 me-2"></i>Receta Electrónica</button>
+                <button class="btn btn-light border btn-pill"><i class="bi bi-chat-dots me-2"></i>Contactar Centro</button>
+            </div>
         </div>
-        <h3 class="fs-4 fw-bold">Cita Previa</h3>
-        <p class="text-muted">Programe su visita presencial o telemática con su médico de cabecera.</p>
-    </div>
-    <div class="col text-center">
-        <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
-            <i class="bi bi-file-medical"></i>
-        </div>
-        <h3 class="fs-4 fw-bold">Informes Clínicos</h3>
-        <p class="text-muted">Consulte y descargue sus analíticas y radiografías al instante.</p>
-    </div>
-    <div class="col text-center">
-        <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
-            <i class="bi bi-prescription2"></i>
-        </div>
-        <h3 class="fs-4 fw-bold">Receta Electrónica</h3>
-        <p class="text-muted">Renueve su medicación sin necesidad de acudir al centro.</p>
     </div>
 </div>
+
+{% else %}
+<!-- VISTA LANDING (SIN LOGIN) -->
+<div class="row align-items-center py-5">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold lh-sm mb-3">La gestión de tu salud, <span class="text-primary">más fácil que nunca.</span></h1>
+        <p class="lead text-muted mb-4">Accede a NovaSalut, tu portal de salud digital donde podrás gestionar citas, ver informes médicos y mucho más, de forma 100% segura.</p>
+        <div class="d-flex gap-3">
+            <a href="/login" class="btn btn-primary btn-lg btn-pill px-4">Acceder ahora</a>
+            <a href="/register" class="btn btn-outline-secondary btn-lg btn-pill px-4">Crear cuenta</a>
+        </div>
+    </div>
+    <div class="col-lg-6 text-center d-none d-lg-block">
+        <i class="bi bi-shield-check text-primary" style="font-size: 15rem; opacity: 0.1; position: absolute;"></i>
+        <div class="p-5 bg-white rounded-5 shadow-lg position-relative">
+            <i class="bi bi-heart-pulse text-primary" style="font-size: 10rem;"></i>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-4 text-center">
+    <div class="col-md-4">
+        <div class="card p-4 h-100">
+            <i class="bi bi-cloud-check text-primary h1"></i>
+            <h4 class="fw-bold">Infraestructura Cloud</h4>
+            <p class="text-muted">Tus datos alojados en Amazon Web Services con la máxima disponibilidad.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4 h-100">
+            <i class="bi bi-shield-lock text-primary h1"></i>
+            <h4 class="fw-bold">Seguridad Total</h4>
+            <p class="text-muted">Cifrado de extremo a extremo y cumplimiento con la normativa sanitaria.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4 h-100">
+            <i class="bi bi-phone text-primary h1"></i>
+            <h4 class="fw-bold">Acceso 24/7</h4>
+            <p class="text-muted">Gestiona tus trámites médicos desde cualquier dispositivo y a cualquier hora.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
