@@ -7,7 +7,7 @@ app.secret_key = 'novasalut_secret_key_2026'
 # --- CONEXIÓN A AMAZON AURORA (Datos de Jaume) ---
 DB_USER = 'admin'
 DB_PASS = 'Passw0rd!:.'
-DB_HOST = 'aurora-cluster.cluster-cy85ltnhoq9c.us-east-1.rds.amazonaws.com'
+DB_HOST = 'auroracluster.cluster-ccvsi5zk9s0d.us-east-1.rds.amazonaws.com'
 DB_NAME = 'triplejota_db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}'
@@ -43,45 +43,38 @@ with app.app_context():
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    # Si el usuario está logueado, le pasamos sus citas para que el Dashboard sea dinámico
+    citas_count = 0
+    if 'user_id' in session:
+        citas_count = Cita.query.filter_by(paciente_id=session['user_id']).count()
+    return render_template('index.html', citas_count=citas_count)
 
-# NUEVA RUTA: REGISTER
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         dni_f = request.form.get('dni')
         nombre_f = request.form.get('nombre')
         pass_f = request.form.get('password')
-
         existe = Paciente.query.filter_by(dni=dni_f).first()
         if existe:
-            flash('El DNI ya está registrado.', 'danger')
+            flash('Este DNI ya está registrado.', 'warning')
             return redirect(url_for('register'))
-
-        nuevo_paciente = Paciente(dni=dni_f, nombre=nombre_f, password=pass_f)
-        try:
-            db.session.add(nuevo_paciente)
-            db.session.commit()
-            flash('Cuenta creada. Ya puedes iniciar sesión.', 'success')
-            return redirect(url_for('login'))
-        except Exception as e:
-            db.session.rollback()
-            flash('Error al crear la cuenta.', 'danger')
+        nuevo = Paciente(dni=dni_f, nombre=nombre_f, password=pass_f)
+        db.session.add(nuevo)
+        db.session.commit()
+        flash('Registro completado. Ya puede entrar.', 'success')
+        return redirect(url_for('login'))
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        dni_f = request.form.get('dni')
-        pass_f = request.form.get('password')
-        user = Paciente.query.filter_by(dni=dni_f).first()
-        if user and user.password == pass_f:
+        user = Paciente.query.filter_by(dni=request.form.get('dni')).first()
+        if user and user.password == request.form.get('password'):
             session['user_id'] = user.id
             session['user_name'] = user.nombre
-            flash(f'Bienvenido, {user.nombre}', 'success')
             return redirect(url_for('home'))
-        else:
-            flash('DNI o contraseña incorrectos.', 'danger')
+        flash('Credenciales incorrectas.', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -92,25 +85,20 @@ def logout():
 @app.route('/citas', methods=['GET', 'POST'])
 def citas():
     if 'user_id' not in session:
-        flash('Inicie sesión primero.', 'warning')
         return redirect(url_for('login'))
     if request.method == 'POST':
-        try:
-            nueva_cita = Cita(
-                fecha=request.form.get('fecha'),
-                horario=request.form.get('horario'),
-                especialidad=request.form.get('especialidad'),
-                medico=request.form.get('medico'),
-                observaciones=request.form.get('observaciones'),
-                paciente_id=session['user_id']
-            )
-            db.session.add(nueva_cita)
-            db.session.commit()
-            flash('✅ Cita guardada.', 'success')
-            return redirect(url_for('historial'))
-        except Exception as e:
-            db.session.rollback()
-            flash('❌ Error al guardar.', 'danger')
+        nueva = Cita(
+            fecha=request.form.get('fecha'),
+            horario=request.form.get('horario'),
+            especialidad=request.form.get('especialidad'),
+            medico=request.form.get('medico'),
+            observaciones=request.form.get('observaciones'),
+            paciente_id=session['user_id']
+        )
+        db.session.add(nueva)
+        db.session.commit()
+        flash('Cita programada correctamente.', 'success')
+        return redirect(url_for('historial'))
     return render_template('citas.html')
 
 @app.route('/historial')
